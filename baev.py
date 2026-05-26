@@ -60,7 +60,8 @@ class BAEV:
         self.filename = filename
         self.stream = stream
         self.string_pool = string_pool
-        with open("events.json", "r") as f:
+        events_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "events.json")
+        with open(events_path, "r", encoding="utf-8") as f:
             self.event_list = json.load(f)
 
     @classmethod
@@ -126,8 +127,6 @@ class BAEV:
         container["String Pool Offset"] = self.stream.read_u64()
         container["Event Info"] = self.read_array(self.read_node)
         nodes = self.read_array(self.read_event_node)
-        with open('test.json', 'w') as f:
-            json.dump(nodes, f, indent=4)
         for entry in container["Event Info"]:
             for i in range(len(entry["Nodes"])):
                 entry["Nodes"][i] = nodes[entry["Nodes"][i]]

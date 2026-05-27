@@ -2359,10 +2359,11 @@ class ASB:
             buffer.seek(0x50)
             buffer.write(u32(len(buffer._strings)))
         
-        if self.has_asnode_baev:
-            events = {}
-            for node in self.nodes:
-                if "BAEV Events" in node:
-                    events["0x%08x" % calc_hash(node["GUID"])] = node["BAEV Events"]
+        # Export BAEV if any nodes have BAEV Events (regardless of has_asnode_baev flag)
+        events = {}
+        for node in self.nodes:
+            if "BAEV Events" in node:
+                events["0x%08x" % calc_hash(node["GUID"])] = node["BAEV Events"]
+        if events:
             anim_events = BAEV.from_dict(events, self.filename)
             anim_events.to_binary(output_dir)

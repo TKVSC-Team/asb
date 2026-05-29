@@ -1,6 +1,7 @@
 # Largely adapated from https://github.com/zeldamods/evfl
-import struct
 import io
+import struct
+
 
 def get_string(data, offset):
     if type(data) != bytes:
@@ -31,48 +32,48 @@ class ReadStream(Stream):
 
     def read(self, *args) -> bytes:
         return self.stream.read(*args)
-    
+
     def read_u8(self, end="<") -> int:
         return struct.unpack(f"{end}B", self.read(1))[0]
-    
+
     def read_u16(self, end="<") -> int:
         return struct.unpack(f"{end}H", self.read(2))[0]
-    
+
     def read_s16(self, end="<") -> int:
         return struct.unpack(f"{end}h", self.read(2))[0]
-    
+
     def read_u24(self, end="<") -> int:
         if end == "<":
             return struct.unpack(f"{end}I", self.read(3) + b'\x00')[0]
         else:
             return struct.unpack(f"{end}I", b'\x00' + self.read(3))[0]
-        
+
     def read_s24(self, end="<") -> int:
         if end == "<":
             return struct.unpack(f"{end}i", self.read(3) + b'\x00')[0]
         else:
             return struct.unpack(f"{end}i", b'\x00' + self.read(3))[0]
-    
+
     def read_u32(self, end="<") -> int:
         return struct.unpack(f"{end}I", self.read(4))[0]
-    
+
     def read_s32(self, end="<") -> int:
         return struct.unpack(f"{end}i", self.read(4))[0]
-    
+
     def read_u64(self, end="<") -> int:
         return struct.unpack(f"{end}Q", self.read(8))[0]
-    
+
     def read_s64(self, end="<") -> int:
         return struct.unpack(f"{end}q", self.read(8))[0]
-    
+
     def read_ptr(self, align=8, end="<") -> int:
         while self.stream.tell() % align != 0:
             self.read(1)
         return struct.unpack(f"{end}Q", self.read(8))[0]
-    
+
     def read_f32(self, end="<") -> float:
         return struct.unpack(f"{end}f", self.read(4))[0]
-    
+
     def read_f64(self, end="<") -> float:
         return struct.unpack(f"{end}d", self.read(4))[0]
 
@@ -100,7 +101,7 @@ class ReadStream(Stream):
             string += current_char
             current_char = self.stream.read(1)
         return string.decode('utf-8')
-    
+
 class PlaceholderWriter:
     __slots__ = ["_offset"]
 

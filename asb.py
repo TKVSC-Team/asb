@@ -11,9 +11,10 @@ try:
 except ImportError:
     raise ImportError("baev.py not found")
 
-from enum import Enum
 import json
 import os
+from enum import Enum
+
 try:
     import mmh3
 except ImportError:
@@ -127,7 +128,7 @@ class Blackboard:
         entry["Offset"] = self.stream.read_u16()
         self.stream.read(2)
         return entry
-    
+
     def read_entry(self):
         entry = {}
         flags = self.stream.read_u32()
@@ -139,12 +140,12 @@ class Blackboard:
         name_offset = flags & 0x3FFFFF
         entry["Name"] = self.string_pool.read_string(name_offset)
         return entry
-    
+
     def read_file_ref(self):
         filename = self.string_pool.read_string(self.stream.read_u32())
         self.stream.read(12) # these are just hashes of different parts of the filename we can recalculate later
         return filename
-    
+
     def read_value(self, datatype):
         if datatype == "int":
             value = self.stream.read_u32()
@@ -215,7 +216,7 @@ class ASB:
                 for transition in node["Body"]["State Transitions"]:
                     if transition["State Transition"]:
                         self.state_transitions.append(transition["State Transition"])
-        
+
         for transition_group in self.transitions:
             for transition in transition_group["Transitions"]:
                 if "Command Group" in transition and transition["Command Group"] not in self.command_groups:
@@ -239,7 +240,7 @@ class ASB:
         sync_control_count = stream.read_u32()
         blackboard_offset = stream.read_u32()
         string_pool_offset = stream.read_u32()
-        
+
         pos = stream.tell()
         stream.seek(string_pool_offset)
         string_pool = ReadStream(stream.read())
@@ -277,7 +278,7 @@ class ASB:
         if expression_offset != 0:
             this.stream.seek(expression_offset)
             this.expressions = EXB(this.stream.read()).exb_section
-        
+
         this.stream.seek(calc_controller_offset)
         while this.stream.tell() < valid_tags_offset:
             this.calc_ctrl.append(this.read_calc_ctrl())
@@ -287,7 +288,7 @@ class ASB:
             this.commands.append(this.read_command())
 
         node_offset = this.stream.tell()
-        assert node_offset == 0x6C + command_count * 0x30, f"Error reading commands"
+        assert node_offset == 0x6C + command_count * 0x30, "Error reading commands"
 
         this.stream.seek(event_offsets_offset)
         for i in range(event_count):
@@ -300,34 +301,34 @@ class ASB:
         this.stream.seek(bone_groups_offset)
         for i in range(bone_group_count):
             this.bone_groups.append(this.read_bone_group())
-        
+
         if command_groups_offset != 0:
             this.stream.seek(command_groups_offset)
             for i in range(this.stream.read_u32()):
                 this.command_groups.append(this.read_command_group())
-        
+
         this.stream.seek(transitions_offset)
         count = this.stream.read_u32()
         stream.read(4) # usually 0 idk what it's for
         for i in range(count):
             this.transitions.append(this.read_transition_group())
-        
+
         this.stream.seek(valid_tags_offset)
         for i in range(this.stream.read_u32()):
             this.valid_tags.append(this.string_pool.read_string(this.stream.read_u32()))
-        
+
         this.stream.seek(partials_offset)
         for i in range(partial_count):
             this.partials.append(this.read_partial())
-        
+
         this.stream.seek(as_markings_offset)
         for i in range(this.stream.read_u32()):
             this.as_markings.append(this.read_as_marking())
-        
+
         this.stream.seek(material_blend_offset)
         for i in range(this.stream.read_u32()):
             this.material_blend.append(this.read_material_blend())
-        
+
         this.stream.seek(state_transition_offset)
         for i in range(this.stream.read_u32()):
             this.state_transitions.append(this.read_state_transition())
@@ -342,7 +343,7 @@ class ASB:
     def from_dict(cls, data):
         assert type(data) == dict, "Data should be a dictionary"
         return cls(data)
-    
+
     def asdict(self):
         return {
             "Metadata" : {"Filename" : self.filename, "Version" : hex(self.version),
@@ -453,7 +454,7 @@ class ASB:
         command["Node Index"] = self.stream.read_u16()
         self.stream.read(2) # a second node index in AINB but I haven't seen it ever used and it's always 0 so might be padding
         return command
-    
+
     def read_event_param(self):
         count = self.stream.read_u32()
         offsets = []
@@ -475,7 +476,7 @@ class ASB:
             else:
                 raise ValueError(hex(type_flag), hex(offset)) # there might be a vec3f one but I haven't seen it before
         return params
-    
+
     def read_trigger_event(self):
         event = {}
         event["Name"] = self.string_pool.read_string(self.stream.read_u32())
@@ -522,7 +523,7 @@ class ASB:
                 events["Hold Events"].append(self.read_hold_event())
         self.stream.seek(pos)
         return events
-    
+
     def read_sync_control(self):
         controller = {}
         type = self.stream.read_u32()
@@ -543,7 +544,7 @@ class ASB:
             raise ValueError(f"Invalid sync control type {type} @ {hex(pos - 0x18)}")
         self.stream.seek(pos)
         return controller
-    
+
     def read_bone_group(self):
         bone_group = {}
         offset = self.stream.read_u32()
@@ -560,7 +561,7 @@ class ASB:
             bone_group["Bones"].append(bone)
         self.stream.seek(pos)
         return bone_group
-    
+
     def read_command_group(self):
         cmd_group = []
         offset = self.stream.read_u32()
@@ -571,7 +572,7 @@ class ASB:
             cmd_group.append(self.string_pool.read_string(self.stream.read_u32()))
         self.stream.seek(pos)
         return cmd_group
-    
+
     def read_transition(self):
         transition = {}
         types = {
@@ -597,7 +598,7 @@ class ASB:
         if cmd_group_index >= 0:
             transition["Command Group"] = self.command_groups[cmd_group_index]
         return transition
-    
+
     def read_transition_group(self):
         transition = {}
         count = self.stream.read_u32()
@@ -610,7 +611,7 @@ class ASB:
             transition["Transitions"].append(self.read_transition())
         self.stream.seek(pos)
         return transition
-    
+
     def read_as_marking(self):
         return [self.string_pool.read_string(self.stream.read_u32()), # "ASMarking"
                  self.string_pool.read_string(self.stream.read_u32()), # "ASマーキング" (same thing but in jp)
@@ -621,7 +622,7 @@ class ASB:
         entry["Name"] = self.string_pool.read_string(self.stream.read_u32())
         entry["Blend Start"] = self.stream.read_f32()
         return entry
-    
+
     def read_state_transition_param(self):
         param = {}
         types = {
@@ -638,7 +639,7 @@ class ASB:
             param["Value 1"] = self.parse_param(type)
             param["Value 2"] = self.parse_param(type)
         return param
-    
+
     def read_state_transition(self):
         transition = {}
         transition["Current Node"] = self.stream.read_u16()
@@ -654,7 +655,7 @@ class ASB:
             self.read_state_transition_param(), self.read_state_transition_param()
         ]
         return transition
-    
+
     def read_partial(self):
         partial = {}
         count = self.stream.read_u16()
@@ -669,7 +670,7 @@ class ASB:
             bone["Unknown 2"] = self.stream.read_u16()
             partial["Bones"].append(bone)
         return partial
-    
+
     def read_node(self, sync_offset):
         node = {}
         node["Node Index"] = len(self.nodes)
@@ -751,7 +752,7 @@ class ASB:
             node["Body"] = self.Unknown7()
         self.stream.seek(pos)
         return node
-    
+
     def read_connections(self):
         offsets = {"State" : [], "Unk" : [], "Child" : [], "State Transition" : [], "Event" : [], "Frame Controls" : []}
         # This type is used by State Connections but I haven't seen any these nodes used ever
@@ -808,7 +809,7 @@ class ASB:
                 self.stream.seek(offset)
                 frame.append(self.stream.read_u32())
         return offsets, transition, event, frame, state
-    
+
     def FloatSelector(self):
         entry = {}
         entry["Parameter"] = self.parse_param("float", True)
@@ -823,7 +824,7 @@ class ASB:
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default"] = self.parse_param("string")
                     self.stream.read(8) # empty
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition Min"] = self.parse_param("float")
                     child["Condition Max"] = self.parse_param("float")
@@ -852,7 +853,7 @@ class ASB:
                 child = {}
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default"] = self.parse_param("string")
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition"] = self.parse_param("string")
                     child["Node Index"] = self.stream.read_u32()
@@ -970,7 +971,7 @@ class ASB:
                 child = {}
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default"] = self.parse_param("int")
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition"] = self.parse_param("int")
                     child["Node Index"] = self.stream.read_u32()
@@ -1093,7 +1094,7 @@ class ASB:
         if frame:
             entry["Frame Controls"] = frame
         return entry
-    
+
     def DummyAnimation(self):
         entry = {}
         entry["Frame"] = self.parse_param("float") # frame count
@@ -1183,7 +1184,7 @@ class ASB:
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default"] = self.parse_param("string")
                     self.stream.read(8) # empty
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition Min"] = self.parse_param("float")
                     child["Condition Max"] = self.parse_param("float")
@@ -1388,7 +1389,7 @@ class ASB:
         if frame:
             entry["Frame Controls"] = frame
         return entry
-    
+
     def import_baev(self, data):
         if isinstance(data, dict):
             events = BAEV.from_dict(data, self.filename).events
@@ -1487,7 +1488,7 @@ class ASB:
             os.makedirs(output_dir, exist_ok=True)
         with open(os.path.join(output_dir, self.filename + ".json"), "w", encoding="utf-8") as f:
             json.dump(self.asdict(), f, indent=4, ensure_ascii=False)
-    
+
      # Let's just do this all now so we don't have to jump back and fill in the offsets later
     def calc_offsets(self, body_sizes, event_count, sync_count, tag_groups, buffer):
         offsets = {}
@@ -1579,7 +1580,7 @@ class ASB:
         offset += 4
         offsets["Strings"] = offset
         return offsets, tag_map, event_offsets
-    
+
     @staticmethod
     def calc_body_size(node, version):
         if node["Node Type"] == "FloatSelector":
@@ -2291,7 +2292,7 @@ class ASB:
                     buffer.write(u32(buffer._string_refs[file]))
                     buffer.write(u32(mmh3.hash(file, signed=False)))
                     buffer.write(u32(mmh3.hash(os.path.splitext(os.path.basename(file))[0], signed=False)))
-                    buffer.write(u32(mmh3.hash(os.path.splitext(file)[1].replace('.', ''), signed=False)))        
+                    buffer.write(u32(mmh3.hash(os.path.splitext(file)[1].replace('.', ''), signed=False)))
             else:
                 buffer.skip(48)
             for entry in self.partials:
@@ -2342,7 +2343,7 @@ class ASB:
                 buffer.write(u32(len(group)))
                 for tag in group:
                     buffer.add_string(tag)
-                    buffer.write(u32(buffer._string_refs[tag]))  
+                    buffer.write(u32(buffer._string_refs[tag]))
             buffer.seek(offsets["ASMarkings"])
             buffer.write(u32(len(self.as_markings)))
             for triplet in self.as_markings:
@@ -2358,7 +2359,7 @@ class ASB:
             buffer.write(buffer._strings)
             buffer.seek(0x50)
             buffer.write(u32(len(buffer._strings)))
-        
+
         # Export BAEV if any nodes have BAEV Events (regardless of has_asnode_baev flag)
         events = {}
         for node in self.nodes:

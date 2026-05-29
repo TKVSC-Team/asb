@@ -11,10 +11,11 @@ except ImportError:
         import sarc
     except ImportError:
         raise ImportError("sarc.py not found")
+import sys
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List
-import sys
+from typing import Dict
+
 
 class ZstdDecompressor(zstd.ZstdDecompressor):
     def __init__(self, dictionary: zstd.ZstdCompressionDict=None, format: int=zstd.FORMAT_ZSTD1) -> None:
@@ -22,11 +23,11 @@ class ZstdDecompressor(zstd.ZstdDecompressor):
 
     def _decompress(self, data: bytes) -> bytes:
         return self.decompress(data)
-    
+
 class ZstdCompressor(zstd.ZstdCompressor):
     def __init__(self, dictionary: zstd.ZstdCompressionDict=None) -> None:
         super().__init__(dict_data=dictionary)
-    
+
     def _compress(self, data: bytes) -> bytes:
         return self.compress(data)
 
@@ -47,7 +48,7 @@ class ZstdDecompContext:
         self.pack_compress: ZstdCompressor = ZstdCompressor(dictionaries["pack.zsdic"])
         self.bcett_compress: ZstdCompressor = ZstdCompressor(dictionaries["bcett.byml.zsdic"])
         self.zs_compress: ZstdCompressor = ZstdCompressor(dictionaries["zs.zsdic"])
-    
+
     def decompress(self, filepath: str) -> bytes:
         if not(filepath.endswith(".zs") or filepath.endswith(".zstd")):
             return Path(filepath).read_bytes()
@@ -59,7 +60,7 @@ class ZstdDecompContext:
             return self.mc._decompress(Path(filepath).read_bytes())
         else:
             return self.zs._decompress(Path(filepath).read_bytes())
-    
+
     def compress(self, filepath: str) -> bytes:
         if filepath.endswith(".pack.zs"):
             return self.pack_compress._compress(Path(filepath).read_bytes())

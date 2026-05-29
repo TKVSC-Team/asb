@@ -1,6 +1,8 @@
-from utils import *
-import os
 import io
+import os
+
+from utils import *
+
 
 class Sarc:
     # Takes a SARC file, directory, or raw bytes as input
@@ -78,10 +80,10 @@ class Sarc:
             node["Data Start"] = self.stream.read_u32(self.bom)
             node["Data End"] = self.stream.read_u32(self.bom)
             nodes.append(node)
-        
+
         if self.data_offset < self.stream.tell():
             raise ValueError("Data section must come after SFNT section")
-        
+
         # SFNT Header
         self.sfnt_magic = self.stream.read(4).decode('utf-8')
         assert self.sfnt_magic == "SFNT", f"Invalid SFNT magic, expected 'SFNT' but got '{self.sfnt_magic}'"
@@ -100,7 +102,7 @@ class Sarc:
             file["Data"] = self.data[node["Data Start"]:node["Data End"]]
             self.stream.seek(pos)
             self.files.append(file)
-        
+
         self.stream.seek(0, io.SEEK_END)
         self.size = self.stream.tell()
 
@@ -125,7 +127,7 @@ class Sarc:
         for byte in filename:
             hash = hash * self.hash_mult + byte
         return hash & 0xFFFFFFFF
-    
+
     # Creates SARC file
     def CreateArchive(self, filename='', output_dir='', endianness="little"):
         if endianness.lower() == "little":
@@ -189,13 +191,13 @@ class Sarc:
             buffer.seek(0)
             data = buffer.read()
         return data
-    
+
     # Removes specified file
     def RemoveFile(self, filepath):
         for file in self.files:
             if file["Name"] == filepath:
                 self.files.remove(file)
-    
+
     # Adds specified file/folder
     def AddFile(self, filepath):
         if os.path.isdir(filepath):
@@ -209,7 +211,7 @@ class Sarc:
         elif os.path.isfile(filepath):
             with open(filepath, 'rb') as file:
                 self.files.append({"Name" : filepath, "Data" : file.read()})
-    
+
     # Replaces specified file with new file
     def ReplaceFile(self, old_file, new_file):
         dir_path = os.path.dirname(old_file)
@@ -229,7 +231,7 @@ class Sarc:
         for file in self.files:
             files[file["Name"]] = len(file["Data"])
         return files
-    
+
     # Removes all files in archive
     def ClearArchive(self):
         self.files = []

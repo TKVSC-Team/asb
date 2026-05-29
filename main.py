@@ -1,9 +1,10 @@
 import os
-import dearpygui.dearpygui as dpg
 import tkinter.filedialog
-
 import traceback
+
 import converter
+import dearpygui.dearpygui as dpg
+
 
 def open_dir(sender, app_data, user_data):
     if user_data == "asbtojson_output":
@@ -17,7 +18,7 @@ def open_dir(sender, app_data, user_data):
             f.write(path)
             f.close()
         dpg.set_value("romfs", "RomFS path: " + path)
-        
+
 
 def open_file(sender, app_data, user_data):
     if user_data == "asbtojson_input":
@@ -55,8 +56,8 @@ def conversion_stuff(sender, app_data, user_data):
             converter.baev_to_json(dpg.get_value("baevtojson_input"))
         if user_data == "jsontobaev":
             converter.json_to_baev(dpg.get_value("jsontobaev_input"))
-        
-    except Exception as e:
+
+    except Exception:
         dpg.set_value("error_output", traceback.format_exc())
 
 def init_dpg():
@@ -74,7 +75,7 @@ def init_dpg():
                 with open("romfs.txt", "r", encoding="utf-8") as f:
                     romFSPath = f.read()
                     f.close()
-            
+
             dpg.add_text("RomFS path: " + romFSPath, tag="romfs")
             dpg.add_button(label="Browse for RomFS folder", callback=open_dir, user_data="romfs")
 
@@ -105,8 +106,8 @@ def init_dpg():
             dpg.add_text(tag="jsontobaev_input", default_value="Input file placeholder")
 
             dpg.add_button(label="Convert", callback=conversion_stuff, user_data="jsontobaev")
-    
-    
+
+
         error_output = dpg.add_text(tag="error_output", default_value="errors display here")
         dpg.bind_item_theme(error_output, errorhandlertheme)
     dpg.create_viewport(title="ASB worker GUI", width=300, height=400)

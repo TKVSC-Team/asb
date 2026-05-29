@@ -1,6 +1,7 @@
 # I should rewrite this but I'm lazy and it works for now
 
 from enum import Enum
+
 try:
     from utils import *
 except ImportError:
@@ -40,7 +41,7 @@ class Command(Enum):
 
 class Type(Enum):
     none                = 0 # For operations that don't involve calculations (such as Jump)
-    immediate_or_user   = 1 # Only used for the input/output data type field in command info 
+    immediate_or_user   = 1 # Only used for the input/output data type field in command info
     bool                = 2
     s32                 = 3
     f32                 = 4
@@ -70,11 +71,11 @@ class EXB:
             self.magic = self.stream.read(4).decode('utf-8')
             if self.magic != "EXB ":
                 raise ValueError(f"Invalid magic: {self.magic} - expected 'EXB '")
-            
+
             self.version = self.stream.read_u32()
             if self.version not in [0x02, 0x01]:
                 raise ValueError(f"Invalid EXB version: {hex(self.version)} - expected 0x2")
-            
+
             self.static_size = self.stream.read_u32()
             self.field_entry_count = self.stream.read_u32()
             self.scratch_32_size = self.stream.read_u32()
@@ -112,7 +113,7 @@ class EXB:
             self.instructions = []
             for i in range(instruction_count):
                 self.instructions.append(self.ReadInstruction())
-            
+
             # Match instructions to commands
             instruction_index = 0
             for command in self.commands:
@@ -173,7 +174,7 @@ class EXB:
         # We don't need to store these fields
         del info["Instruction Base Index"], info["Static Memory Size"], info["32-bit Scratch Memory Size"], info["64-bit Scratch Memory Size"]
         return info
-    
+
     def ReadInstruction(self):
         instruction = {}
         instruction["Type"] = Command(self.stream.read_u8()).name
@@ -213,7 +214,7 @@ class EXB:
             instruction["Static Memory Index"] = self.stream.read_u16()
             instruction["Signature"] = self.string_pool.read_string(self.signature_offsets[self.stream.read_u32()])
             return instruction
-        
+
     def ToBytes(self, exb, dest, offset=0, exb_instance_count=0): # exb is an EXB object
         buffer = dest
         buffer.seek(offset)

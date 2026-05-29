@@ -12,8 +12,9 @@ except ImportError:
     raise ImportError("baev.py not found")
 
 import os
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
+
 
 @lru_cache
 def get_ctx(romfs_path):

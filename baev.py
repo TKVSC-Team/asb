@@ -6,11 +6,12 @@ except ImportError:
 import json
 import os
 
+
 # Hash function for baev hashes
 # The seed is the first string in the string pool (usually null)
 # The string is either the node's GUID in the asb file or the animation's name
 def calc_hash(string, seed=""):
-    
+
     length = len(string)
 
     hash = 0x811c9dc5
@@ -68,7 +69,7 @@ class BAEV:
     def from_binary(cls, data, filename):
         assert type(data) in [bytes, bytearray], "Data should be bytes or bytearray"
         this = cls([], filename, ReadStream(data), ReadStream(data))
-        
+
         header = this.read_file_header()
         this.stream.seek(header["Section Info"][0]["Base Offset"])
         container = this.read_container()
@@ -80,23 +81,23 @@ class BAEV:
     def from_dict(cls, data, filename):
         assert type(data) == dict, "Data should be a dictionary"
         return cls(data, filename)
-    
+
     def read_header(self):
         header = {}
         # should be BFFH (binary cafe file header) or BFSI (binary cafe section info)
-        header["Magic"] = self.stream.read(4).decode('utf-8') 
+        header["Magic"] = self.stream.read(4).decode('utf-8')
         header["Section Offset"] = self.stream.read_u32()
         header["Section Size"] = self.stream.read_u32()
         header["Section Alignment"] = self.stream.read_u32()
         return header
-    
+
     def read_file_header(self):
         header = self.read_header()
         header["Section Info"] = self.read_array(self.read_section_header)
         header["Container Offset"] = self.stream.read_u64()
         header["Meme"] = self.stream.read(0x80).replace(b'\x00', b'').decode('utf-8')
         return header
-    
+
     def read_section_header(self):
         header = self.read_header()
         header["Base Offset"] = self.stream.read_u64()
@@ -115,7 +116,7 @@ class BAEV:
             array.append(element())
         self.stream.seek(pos)
         return array
-    
+
     def read_container(self):
         container = {}
         container["Head Offset"] = self.stream.read_u64()
@@ -131,14 +132,14 @@ class BAEV:
             for i in range(len(entry["Nodes"])):
                 entry["Nodes"][i] = nodes[entry["Nodes"][i]]
         return container
-    
+
     def read_node(self):
         entry = {}
         entry["Hash"] = "0x%08x" % self.stream.read_u32()
         padding = self.stream.read_u32()
         entry["Nodes"] = self.read_array(self.stream.read_u32) # indices
         return entry
-    
+
     def read_event_node(self):
         entry = {}
         offset = self.stream.read_u64()
@@ -174,7 +175,7 @@ class BAEV:
         entry["Start Frame"] = self.stream.read_f32()
         padding = self.stream.read_f32()
         return entry
-    
+
     def read_hold_event_array(self):
         entry = {}
         entry["Parameters"] = self.read_array(self.read_param_offset)
@@ -206,7 +207,7 @@ class BAEV:
         param = self.read_parameter()
         self.stream.seek(pos)
         return param
-    
+
     def to_json(self, output_dir=""):
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -300,7 +301,7 @@ class BAEV:
                 buffer.write(u64(offsets["HashHeader"]))
                 buffer.write(u32(len(self.events)))
                 buffer.write(u32(0x18)) # element size
-                
+
             if (count == 0):
                 buffer.write(u64(0))
                 buffer.write(u32(0))

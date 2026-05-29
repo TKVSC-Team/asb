@@ -1,12 +1,13 @@
 # left here bc I have notes in comments that I haven't transcribed elsewhere yet
 
-from exb import EXB
-from utils import *
-from enum import Enum
-import zstd
 import json
 import os
+from enum import Enum
+
 import mmh3
+import zstd
+from exb import EXB
+from utils import *
 
 # Reserialization does not support version 0x40F
 
@@ -66,7 +67,7 @@ class ASB:
             self.version = self.stream.read_u32()
             if self.version not in [0x417, 0x40F]: # Must be version 0x417 or 0x40F
                 raise Exception(f"Invalid version {hex(self.version)} - expected 0x417 or 0x40F")
-            
+
             self.filename_offset = self.stream.read_u32()
             self.command_count = self.stream.read_u32()
             self.node_count = self.stream.read_u32()
@@ -75,7 +76,7 @@ class ASB:
             self.x38_count = self.stream.read_u32()
             self.local_blackboard_offset = self.stream.read_u32()
             self.string_pool_offset = self.stream.read_u32()
-            
+
             # Create string pool slice
             jumpback = self.stream.tell()
             self.stream.seek(self.string_pool_offset)
@@ -315,7 +316,7 @@ class ASB:
             else:
                 raise ValueError(f"Invalid parameter type: {type}")
         return value
-    
+
     def BlackboardHeader(self):
         entry = {}
         entry["Count"] = self.stream.read_u16()
@@ -335,7 +336,7 @@ class ASB:
         name_offset = bitfield & 0x3FFFFF
         entry["Name"] = self.string_pool.read_string(name_offset)
         return entry
-    
+
     def BlackboardParamValue(self, type):
         if type == "int":
             value = self.stream.read_u32()
@@ -386,19 +387,19 @@ class ASB:
                     del entry["Index"]
         self.local_blackboard_params = {key : value for key, value in self.local_blackboard_params.items() if value} # Remove types with no entries
         return self.local_blackboard_params
-    
+
     def TagGroup(self):
         count = self.stream.read_u32()
         tags = []
         for i in range(count):
             tags.append(self.string_pool.read_string(self.stream.read_u32()))
         return tags
-    
+
     # reminder nintendo does %08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x - need to fix
     def GUID(self) -> str:
         return hex(self.stream.read_u32())[2:] + "-" + hex(self.stream.read_u16())[2:] + "-" + hex(self.stream.read_u16())[2:] \
             + "-" + hex(self.stream.read_u16())[2:] + "-" + self.stream.read(6).hex()
-    
+
     def Command(self):
         command = {}
         command["Name"] = self.string_pool.read_string(self.stream.read_u32())
@@ -417,7 +418,7 @@ class ASB:
         command["Left Node Index"] = self.stream.read_u16()
         command["Right Node Index"] = self.stream.read_u16() - 1
         return command
-    
+
     def EventParameter(self):
         values = []
         offsets = []
@@ -453,7 +454,7 @@ class ASB:
         event["Parameters"] = self.EventParameter()
         self.stream.seek(pos)
         return event
-    
+
     def HoldEvent(self):
         event = {}
         event["Name"] = self.string_pool.read_string(self.stream.read_u32())
@@ -508,7 +509,7 @@ class ASB:
             raise ValueError(f"Invalid type {entry['Type']} - {hex(pos)}")
         self.stream.seek(pos)
         return entry
-    
+
     # Seems to be some type of calculation preset?
     def X40(self):
         entry = {}
@@ -520,7 +521,7 @@ class ASB:
             # 2 = radians
             # 3 = degrees + normalize result (between -pi and pi)
             # 4 = radians + normalize result (between -pi and pi)
-            entry["Type"] = self.stream.read_u32() 
+            entry["Type"] = self.stream.read_u32()
         entry["Unknown 2"] = self.stream.read_f32() # Default angle if angle not set
         entry["Rate"] = self.stream.read_f32() # Adjustment rate
         entry["Unknown 3"] = self.stream.read_f32() # Base result (result = base_result + adjust_rate * adjusted_angle)
@@ -610,7 +611,7 @@ class ASB:
         entry["Name"] = self.string_pool.read_string(self.stream.read_u32())
         entry["Unknown"] = self.stream.read_f32() # fade in frame
         return entry
-    
+
     # Only used in version 0x40F even though it's present in 0x417
     # 0x417 enum values are listed in the string pool but are never used
     def EnumResolve(self):
@@ -619,7 +620,7 @@ class ASB:
         entry["Class Name"] = self.string_pool.read_string(self.stream.read_u32())
         entry["Value Name"] = self.string_pool.read_string(self.stream.read_u32())
         return offset, entry
-    
+
     def X2CSubEntry(self):
         entry = {}
         entry["Entry Type"] = self.stream.read_u16() # data type
@@ -658,7 +659,7 @@ class ASB:
             self.X2CSubEntry(), self.X2CSubEntry(), self.X2CSubEntry(), self.X2CSubEntry()
         ]
         return entry
-    
+
     def Slot(self):
         entry = {}
         count = self.stream.read_u16()
@@ -673,7 +674,7 @@ class ASB:
             slot["Unknown 2"] = self.stream.read_u16()
             entry["Entries"].append(slot)
         return entry
-    
+
     def Node(self):
         node = {}
         node["Node Type"] = NodeType(self.stream.read_u16()).name
@@ -753,7 +754,7 @@ class ASB:
             node["Body"] = self.Unknown7()
         self.stream.seek(pos)
         return node
-    
+
     def NodeConnections(self):
         offsets = {"State" : [], "Unk" : [], "Child" : [], "0x2c" : [], "Event" : [], "Frame" : []}
         # This type is used by State nodes but I haven't seen any these nodes used ever
@@ -830,7 +831,7 @@ class ASB:
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default Condition"] = self.ParseParameter("string")
                     self.stream.read(8) # empty
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition Min"] = self.ParseParameter("float")
                     child["Condition Max"] = self.ParseParameter("float")
@@ -859,7 +860,7 @@ class ASB:
                 child = {}
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default Condition"] = self.ParseParameter("string")
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition"] = self.ParseParameter("string")
                     child["Node Index"] = self.stream.read_u32()
@@ -977,7 +978,7 @@ class ASB:
                 child = {}
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default Condition"] = self.ParseParameter("int")
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition"] = self.ParseParameter("int")
                     if child["Condition"] == 0:
@@ -1103,7 +1104,7 @@ class ASB:
         if frame:
             entry["Frame Node Connections"] = frame
         return entry
-    
+
     def DummyAnimation(self):
         entry = {}
         entry["Frame"] = self.ParseParameter("float") # frame count
@@ -1193,7 +1194,7 @@ class ASB:
                 if len(entry["Child Nodes"]) == len(offsets["Child"]) - 1:
                     child["Default Condition"] = self.ParseParameter("string")
                     self.stream.read(8) # empty
-                    child["Node Index"] = self.stream.read_u32() 
+                    child["Node Index"] = self.stream.read_u32()
                 else:
                     child["Condition Min"] = self.ParseParameter("float")
                     child["Condition Max"] = self.ParseParameter("float")
@@ -1404,7 +1405,7 @@ class ASB:
         if frame:
             entry["Frame Node Connections"] = frame
         return entry
-    
+
     @staticmethod
     def CalcBodySize(node, version):
         if node["Node Type"] == "FloatSelector":
@@ -2215,7 +2216,7 @@ class ASB:
                     buffer.write(u32(buffer._string_refs[file["Filename"]]))
                     buffer.write(u32(mmh3.hash(file["Filename"], signed=False)))
                     buffer.write(u32(mmh3.hash(os.path.splitext(os.path.basename(file["Filename"]))[0], signed=False)))
-                    buffer.write(u32(mmh3.hash(os.path.splitext(file["Filename"])[1].replace('.', ''), signed=False)))        
+                    buffer.write(u32(mmh3.hash(os.path.splitext(file["Filename"])[1].replace('.', ''), signed=False)))
             else:
                 buffer.skip(48)
             for entry in self.slots:
@@ -2260,7 +2261,7 @@ class ASB:
                 buffer.write(u32(len(group)))
                 for tag in group:
                     buffer.add_string(tag)
-                    buffer.write(u32(buffer._string_refs[tag]))  
+                    buffer.write(u32(buffer._string_refs[tag]))
             buffer.seek(offsets["ASMarkings"])
             buffer.write(u32(len(self.as_markings)))
             for triplet in self.as_markings:
@@ -2282,7 +2283,7 @@ class ASB:
             buffer.write(buffer._strings)
             buffer.seek(0x50)
             buffer.write(u32(len(buffer._strings)))
-    
+
     def ToJson(self, output_dir=''):
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)

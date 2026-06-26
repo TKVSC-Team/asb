@@ -256,7 +256,11 @@ class ASB:
         magic = stream.read(4)
         assert magic == b'ASB ', f"Invalid file magic '{magic.decode('utf-8')}', expected 'ASB '"
         version = stream.read_u32()
-        assert version == 0x417 or version == 0x410, f"Unsupported version {hex(version)}, expected 0x417"
+        assert version in (0x417, 0x410, 0x41A, 0x41B), f"Unsupported version {hex(version)}"
+
+        if version in (0x41A, 0x41B):
+            from asb_41x import from_binary_41x
+            return from_binary_41x(data)
 
         filename_offset = stream.read_u32()
         command_count = stream.read_u32()
@@ -463,7 +467,10 @@ class ASB:
                         value = {"Blackboard Index": flags & 0xFFFF, "Type": type}
                 else:
                     value = {"Blackboard Index": flags & 0xFFFF, "Type": type}
-            value["Select Flag"] = SelectFlag(flags >> 0x1c & 3).name
+            try:
+                value["Select Flag"] = SelectFlag(flags >> 0x1c & 3).name
+            except ValueError:
+                value["Select Flag"] = str(flags >> 0x1c & 3)
             if orig and "Input" not in value:
                 value["Default Value"] = orig
         return value
@@ -1963,6 +1970,10 @@ class ASB:
         buffer.write(u8(int(parts[4][10:12], 16)))
 
     def to_binary(self, output_dir=""):
+        if self.version in (0x41A, 0x41B):
+            raise NotImplementedError(
+                f"Writing ASB version {hex(self.version)} is not yet supported; read-only support is available."
+            )
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
         self.current_calc_index = 0

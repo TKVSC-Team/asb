@@ -1,6 +1,6 @@
 # ASB
 
-Scripts to work with ASB and BAEV files, primarily aimed at TotK and Splatoon 3 (ASB version 0x410).
+Scripts to work with ASB and BAEV files, primarily aimed at TotK (0x417), Splatoon 3 (0x410), and Rockstock (0x41A/0x41B).
 May take a second or two to run for larger files.
 
 There's a basic UI available through `main.py`. You can open it by running `python main.py` in the root directory.

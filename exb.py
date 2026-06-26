@@ -73,8 +73,8 @@ class EXB:
                 raise ValueError(f"Invalid magic: {self.magic} - expected 'EXB '")
 
             self.version = self.stream.read_u32()
-            if self.version not in [0x02, 0x01]:
-                raise ValueError(f"Invalid EXB version: {hex(self.version)} - expected 0x2")
+            if self.version not in [0x01, 0x02, 0x03]:
+                raise ValueError(f"Invalid EXB version: {hex(self.version)} - expected 0x1, 0x2, or 0x3")
 
             self.static_size = self.stream.read_u32()
             self.field_entry_count = self.stream.read_u32()
@@ -118,7 +118,7 @@ class EXB:
             instruction_index = 0
             for command in self.commands:
                 command["Instructions"] = []
-                if self.version == 0x02:
+                if self.version in (0x02, 0x03):
                     for i in range(command["Instruction Count"]):
                         command["Instructions"].append(self.instructions[instruction_index + i])
                     instruction_index += len(command["Instructions"])
@@ -161,10 +161,10 @@ class EXB:
     def Info(self):
         info = {}
         info["Base Index Pre-Command Entry"] = self.stream.read_s32()
-        if self.version == 0x02:
+        if self.version in (0x02, 0x03):
             info["Pre-Entry Static Memory Usage"] = self.stream.read_u32()
         info["Instruction Base Index"] = self.stream.read_u32()
-        if self.version == 0x02:
+        if self.version in (0x02, 0x03):
             info["Instruction Count"] = self.stream.read_u32()
         info["Static Memory Size"] = self.stream.read_u32()
         info["32-bit Scratch Memory Size"] = self.stream.read_u16()

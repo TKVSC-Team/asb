@@ -1,6 +1,6 @@
 # ASB
 
-Scripts to work with ASB and BAEV files, primarily aimed at TotK.
+Scripts to work with ASB and BAEV files, primarily aimed at TotK and Splatoon 3 (ASB version 0x410).
 May take a second or two to run for larger files.
 
 There's a basic UI available through `main.py`. You can open it by running `python main.py` in the root directory.

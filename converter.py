@@ -41,6 +41,7 @@ def asb_to_json(filepath, output_dir="", romfs_path="", baev_path=""):
         data = decompress(filepath, romfs_path)
     else:
         data = Path(filepath).read_bytes()
+    load_s3_enums()
     file = ASB.from_binary(data)
     if baev_path != "":
         if baev_path.endswith(".zs") or baev_path.endswith(".zstd"):

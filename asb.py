@@ -21,6 +21,9 @@ try:
 except ImportError:
     raise ImportError("mmh3 not found (pip install mmh3)")
 
+# 0x417 (TotK) and 0x418 (Super Mario Bros. Wonder) use the same layout
+V417_VERSIONS = frozenset({0x417, 0x418})
+
 # Node types
 class NodeType(Enum):
     FloatSelector           = 1
@@ -256,7 +259,7 @@ class ASB:
         magic = stream.read(4)
         assert magic == b'ASB ', f"Invalid file magic '{magic.decode('utf-8')}', expected 'ASB '"
         version = stream.read_u32()
-        assert version in (0x417, 0x410, 0x41A, 0x41B), f"Unsupported version {hex(version)}"
+        assert version in (0x417, 0x418, 0x410, 0x41A, 0x41B), f"Unsupported version {hex(version)}"
 
         if version in (0x41A, 0x41B):
             from asb_41x import from_binary_41x
@@ -297,8 +300,8 @@ class ASB:
         as_markings_offset = this.stream.read_u32()
         expression_offset = this.stream.read_u32()
         command_groups_offset = this.stream.read_u32()
-        material_blend_offset = this.stream.read_u32() if version==0x417 else 0
-        if (version == 0x417):
+        material_blend_offset = this.stream.read_u32() if version in V417_VERSIONS else 0
+        if (version in V417_VERSIONS):
             assert this.stream.tell() == 0x6C, f"Invalid header size {this.stream.tell()}, should be 0x6C for version 0x{version:x}"
         else:
             assert this.stream.tell() == 0x68, f"Invalid header size {this.stream.tell()}, should be 0x68 for version 0x{version:x}"
@@ -332,7 +335,7 @@ class ASB:
 
         node_offset = this.stream.tell()
 
-        if version == 0x417:
+        if version in V417_VERSIONS:
             assert node_offset == 0x6C + command_count * 0x30, f"Error reading commands"
         else:
             assert node_offset == 0x68 + command_count * 0x2C, f"Error reading commands"
@@ -372,7 +375,7 @@ class ASB:
         for i in range(this.stream.read_u32()):
             this.as_markings.append(this.read_as_marking())
             
-        if version == 0x417:
+        if version in V417_VERSIONS:
             this.stream.seek(material_blend_offset)
             for i in range(this.stream.read_u32()):
                 this.material_blend.append(this.read_material_blend())
@@ -494,7 +497,7 @@ class ASB:
         command = {}
         command["Name"] = self.string_pool.read_string(self.stream.read_u32())
         # No command tags in 0x410
-        if self.version == 0x417:
+        if self.version in V417_VERSIONS:
             tag_offset = self.stream.read_u32()
             if tag_offset != 0:
                 pos = self.stream.tell()
@@ -863,7 +866,7 @@ class ASB:
                 entry = {"State Transition" : {}, "Node Index" : -1}
                 if index >= 0:
                     entry["State Transition"] = self.state_transitions[index]
-                if (self. version == 0x417):
+                if (self.version in V417_VERSIONS):
                     entry["Node Index"] = self.stream.read_u32()
                 transition.append(entry)
         event = []
@@ -1095,7 +1098,7 @@ class ASB:
 
     def MaterialAnimation(self):
         entry = {}
-        if (self.version == 0x417):
+        if (self.version in V417_VERSIONS):
             index = self.stream.read_u32() - 1
             if index >= 0:
                 entry["Material Blend Setting"] = self.material_blend[index] # 0x68 index (-1 for index)
@@ -1145,7 +1148,7 @@ class ASB:
         # whether or not to include the initial loop in the loop duration
         entry["Is Include Initial Loop"] = bool(self.stream.read_u32()) # 0x5c
         # Unsure if this is the correct thing to remove but we need to remove a param somewhere? 
-        if (self.version==0x417):
+        if (self.version in V417_VERSIONS):
             entry["Unknown 10"] = self.parse_param("float") # 0x60 seems to be for syncing
         entry["Unknown 11"] = self.parse_param("bool") # 0x68 sets the flag to | 0x400 if true
         entry["Unknown 12"] = self.stream.read_u32() # 0x70 controls the | 0x2000 flag (uint)
@@ -1304,7 +1307,7 @@ class ASB:
         # 5 = return provided end with no calc
         # else return start frame
         entry["Calc Mode"] = InitialFrameCalcMode(self.stream.read_u32()).name
-        if self.version==0x417:
+        if self.version in V417_VERSIONS:
             tag_offset = self.stream.read_u32()
             if tag_offset:
                 pos = self.stream.tell()
@@ -1566,7 +1569,7 @@ class ASB:
     def calc_offsets(self, body_sizes, event_count, sync_count, tag_groups, buffer):
         offsets = {}
         # I'm so sorry for making the entire logic version dependent
-        if self.version == 0x417:
+        if self.version in V417_VERSIONS:
             offset = 0x6C
             offset += 0x30 * len(self.commands)
             offset += 0x24 * len(self.nodes)
@@ -1767,12 +1770,12 @@ class ASB:
         elif node["Node Type"] == "Event":
             size = 0x10
         elif node["Node Type"] == "MaterialAnimation":
-            if version==0x417:
+            if version in V417_VERSIONS:
                 size = 0x20
             else:
                 size = 0x1C
         elif node["Node Type"] == "FrameController":
-            if version==0x417:
+            if version in V417_VERSIONS:
                 size = 0x84
             else:
                 size = 0x7C
@@ -1789,7 +1792,7 @@ class ASB:
         elif node["Node Type"] == "BoneAnimation":
             size = 0x2c
         elif node["Node Type"] == "InitialFrame":
-            if version==0x417:
+            if version in V417_VERSIONS:
                 size = 0x40
             else:
                 size = 0x3C
@@ -1809,7 +1812,7 @@ class ASB:
             if "State Connections" in node["Body"]:
                 size += 8 * len(node["Body"]["State Connections"]) # 4 for the offset and 4 for the index
             if "State Transitions" in node["Body"]:
-                if version == 0x417:
+                if version in V417_VERSIONS:
                     size += 12 * len(node["Body"]["State Transitions"]) # 4 for the offset and 8 for the indices
                 else:
                     size += 8 * len(node["Body"]["State Transitions"]) # 4 for the offset and 4 for the index
@@ -1891,7 +1894,7 @@ class ASB:
         if "State Transitions" in node_body:
             for entry in node_body["State Transitions"]:
                 buffer.write(u32(offset))
-                if self.version == 0x417:
+                if self.version in V417_VERSIONS:
                     offset += 8
                 else:
                     offset += 4
@@ -1945,7 +1948,7 @@ class ASB:
                     buffer.write(u32(self.state_transitions.index(entry["State Transition"])))
                 else:
                     buffer.write(s32(-1))
-                if self.version == 0x417:
+                if self.version in V417_VERSIONS:
                     buffer.write(u32(entry["Node Index"]))
         if "Events" in node_body:
             for entry in node_body["Events"]:
@@ -2040,12 +2043,12 @@ class ASB:
             buffer.write(u32(offsets["ASMarkings"]))
             buffer.write(u32(offsets["EXB"]))
             buffer.write(u32(offsets["Command Groups"]))
-            if self.version==0x417:
+            if self.version in V417_VERSIONS:
                 buffer.write(u32(offsets["Material Blend"]))
             for command in self.commands:
                 buffer.add_string(command["Name"])
                 buffer.write(u32(buffer._string_refs[command["Name"]]))
-                if self.version == 0x417:
+                if self.version in V417_VERSIONS:
                     if "Tags" in command:
                         for tag in command["Tags"]:
                             buffer.add_string(tag)
@@ -2137,7 +2140,7 @@ class ASB:
                         event_index += 1
                         self.write_connections(buffer, body, node["Node Type"])
                     elif node["Node Type"] == "MaterialAnimation":
-                        if self.version==0x417:
+                        if self.version in V417_VERSIONS:
                             if "Material Blend Setting" in body:
                                 buffer.write(u32(self.material_blend.index(body["Material Blend Setting"]) + 1))
                             else:
@@ -2159,7 +2162,7 @@ class ASB:
                         self.write_parameter(buffer, body["Animation Freeze Frame"])
                         self.write_parameter(buffer, body["Loop Duration"])
                         buffer.write(u32(1 if body["Is Include Initial Loop"] else 0))
-                        if self.version==0x417:
+                        if self.version in V417_VERSIONS:
                             self.write_parameter(buffer, body["Unknown 10"])
                         self.write_parameter(buffer, body["Unknown 11"])
                         buffer.write(u32(body["Unknown 12"]))
@@ -2193,7 +2196,7 @@ class ASB:
                         self.write_connections(buffer, body, node["Node Type"])
                     elif node["Node Type"] == "InitialFrame":
                         buffer.write(u32(InitialFrameCalcMode[body["Calc Mode"]].value))
-                        if self.version==0x417:
+                        if self.version in V417_VERSIONS:
                             if "Tags" in body:
                                 buffer.write(u32(tag_map[tuple(body["Tags"])]))
                             else:
